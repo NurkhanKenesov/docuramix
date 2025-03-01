@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Document } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import Logo from '@/components/Logo';
 
 // Мок данных документов
 const mockDocuments: Document[] = [
@@ -106,7 +107,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-background">
       <header className="bg-card shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold">Система управления документами</h1>
+          <Logo />
           <div className="flex items-center gap-4">
             <span className="text-muted-foreground">
               {user?.username} ({user?.role})
