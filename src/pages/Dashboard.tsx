@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/header';
@@ -5,7 +6,6 @@ import { Search, Plus, File, Clock, FileText } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Document, DocumentVersion } from '@/types';
 import { format } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
 
 // Mock data for demo purposes
 const MOCK_DOCUMENTS: Document[] = [
@@ -145,11 +145,7 @@ const Dashboard: React.FC = () => {
     setIsGenerateModalOpen(false);
     setSelectedVersion(null);
     // Show toast message
-    toast({
-      title: "Успешно",
-      description: "Документ сгенерирован успешно!",
-      variant: "default",
-    });
+    toast.success('Документ сгенерирован успешно!');
   };
 
   return (
