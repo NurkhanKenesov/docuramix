@@ -1,616 +1,515 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Header } from '@/components/layout/header';
-import { X, Plus, Image } from 'lucide-react';
-import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { Company, Brand, Product, BankAccount } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
-// Mock data for demo purposes
-const MOCK_COMPANIES = [
-  { id: '1', name: 'ПБ ГЛАСС' },
-  { id: '2', name: 'М1' },
-  { id: '3', name: 'Трегубов Денис Валерьевич' },
-  { id: '4', name: 'Масленников Василий Михайлович' }
+// Мок данных
+const mockCompanies: Company[] = [
+  {
+    id: '1',
+    name: 'ООО Первая Компания',
+    inn: '7712345678',
+    address: 'г. Москва, ул. Примерная, д. 1',
+    director: 'Иванов И.И.',
+    accountant: 'Петрова П.П.'
+  },
+  {
+    id: '2',
+    name: 'ЗАО Вторая Компания',
+    inn: '7812345678',
+    address: 'г. Санкт-Петербург, пр. Образцовый, д. 2',
+    director: 'Сидоров С.С.',
+    accountant: 'Кузнецова К.К.'
+  }
 ];
 
-const MOCK_BRANDS = [
-  { id: '1', name: 'dom-na-dachu.ru', companyId: '1' },
-  { id: '2', name: 'Бренд 2', companyId: '2' },
-  { id: '3', name: 'Бренд 3', companyId: '3' }
+const mockBrands: Brand[] = [
+  { id: '1', name: 'Бренд Альфа', companyId: '1' },
+  { id: '2', name: 'Бренд Бета', companyId: '1' },
+  { id: '3', name: 'Бренд Гамма', companyId: '2' }
 ];
 
-const MOCK_BANK_ACCOUNTS = [
-  { id: '1', name: 'Счет Сбербанк', companyId: '1' },
-  { id: '2', name: 'Счет Тинькофф', companyId: '2' },
-  { id: '3', name: 'Счет ВТБ', companyId: '3' }
+const mockBankAccounts: BankAccount[] = [
+  {
+    id: '1',
+    companyId: '1',
+    accountNumber: '40702810100000001234',
+    bankName: 'Банк "Пример"',
+    bik: '044525123',
+    correspondentAccount: '30101810100000000123'
+  },
+  {
+    id: '2',
+    companyId: '2',
+    accountNumber: '40702810200000002345',
+    bankName: 'Банк "Образец"',
+    bik: '044525234',
+    correspondentAccount: '30101810200000000234'
+  }
+];
+
+const mockProducts: Product[] = [
+  {
+    id: '1',
+    name: 'Товар 1',
+    sku: 'SKU001',
+    price: 1000,
+    description: 'Описание товара 1',
+    brandId: '1'
+  },
+  {
+    id: '2',
+    name: 'Товар 2',
+    sku: 'SKU002',
+    price: 2000,
+    description: 'Описание товара 2',
+    brandId: '1'
+  },
+  {
+    id: '3',
+    name: 'Товар 3',
+    sku: 'SKU003',
+    price: 3000,
+    description: 'Описание товара 3',
+    brandId: '2'
+  }
 ];
 
 const DocumentCreate: React.FC = () => {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'client' | 'company' | 'products' | 'delivery'>('client');
-  const [docType, setDocType] = useState<string>('Продажа');
   
-  // Client form
-  const [orderNumber, setOrderNumber] = useState<string>('');
-  const [clientName, setClientName] = useState<string>('');
-  const [clientParentName, setClientParentName] = useState<string>('');
-  const [clientAddress, setClientAddress] = useState<string>('');
-  const [validityDays, setValidityDays] = useState<number>(1);
-  const [email, setEmail] = useState<string>('');
-  const [phone, setPhone] = useState<string>('');
-  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
-  const [passportSeries, setPassportSeries] = useState<string>('');
-  const [passportNumber, setPassportNumber] = useState<string>('');
-  const [passportIssued, setPassportIssued] = useState<string>('');
-  const [passportDate, setPassportDate] = useState<string>('');
+  // Состояния для вкладок
+  const [activeTab, setActiveTab] = useState<'general' | 'company' | 'products' | 'delivery'>('general');
   
-  // Company form
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [selectedBrand, setSelectedBrand] = useState<string>('');
-  const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
+  // Состояния для формы
+  const [documentType, setDocumentType] = useState<'invoice' | 'contract' | 'act' | 'other'>('invoice');
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [selectedBrandId, setSelectedBrandId] = useState('');
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<Array<Product & { quantity: number }>>([]);
   
-  // Products form
-  const [products, setProducts] = useState<Array<{
-    id: string;
-    name: string;
-    unit: string;
-    price: number;
-    quantity: number;
-    totalPrice: number;
-    hasImage: boolean;
-  }>>([]);
-  const [productName, setProductName] = useState<string>('');
-  const [productUnit, setProductUnit] = useState<string>('');
-  const [productPrice, setProductPrice] = useState<number>(0);
-  const [productQuantity, setProductQuantity] = useState<number>(1);
-  const [productHasImage, setProductHasImage] = useState<boolean>(false);
+  // Состояние для информации о доставке
+  const [deliveryInfo, setDeliveryInfo] = useState({
+    address: '',
+    contactPerson: '',
+    phone: '',
+    email: ''
+  });
   
-  // Delivery form
-  const [includeDelivery, setIncludeDelivery] = useState<boolean>(false);
-  const [deliveryDays, setDeliveryDays] = useState<number>(1);
-  const [deliveryName, setDeliveryName] = useState<string>('');
-  const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
-  const [deliveryQuantity, setDeliveryQuantity] = useState<number>(1);
+  // Фильтрованные списки
+  const filteredBrands = mockBrands.filter(brand => 
+    !selectedCompanyId || brand.companyId === selectedCompanyId
+  );
   
-  const filteredBrands = MOCK_BRANDS.filter(brand => !selectedCompany || brand.companyId === selectedCompany);
-  const filteredBankAccounts = MOCK_BANK_ACCOUNTS.filter(account => !selectedCompany || account.companyId === selectedCompany);
+  const filteredBankAccounts = mockBankAccounts.filter(account => 
+    !selectedCompanyId || account.companyId === selectedCompanyId
+  );
   
-  const handleAddProduct = () => {
-    if (!productName || !productUnit) {
-      toast.error('Заполните все поля товара');
-      return;
-    }
-    
-    setProducts([
-      ...products, 
-      {
-        id: Date.now().toString(),
-        name: productName,
-        unit: productUnit,
-        price: productPrice,
-        quantity: productQuantity,
-        totalPrice: productPrice * productQuantity,
-        hasImage: productHasImage
-      }
-    ]);
-    
-    // Reset form
-    setProductName('');
-    setProductUnit('');
-    setProductPrice(0);
-    setProductQuantity(1);
-    setProductHasImage(false);
+  const filteredProducts = mockProducts.filter(product => 
+    !selectedBrandId || product.brandId === selectedBrandId
+  );
+  
+  // Обработчики
+  const handleCompanyChange = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setSelectedBrandId('');
+    setSelectedBankAccountId('');
   };
   
-  const handleRemoveProduct = (id: string) => {
-    setProducts(products.filter(product => product.id !== id));
+  const handleAddProduct = (product: Product) => {
+    // Проверка, есть ли уже товар в списке
+    const existingProduct = selectedProducts.find(p => p.id === product.id);
+    
+    if (existingProduct) {
+      setSelectedProducts(selectedProducts.map(p => 
+        p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p
+      ));
+    } else {
+      setSelectedProducts([...selectedProducts, { ...product, quantity: 1 }]);
+    }
   };
   
-  const handleSubmit = () => {
-    // Validate required fields
-    if (!orderNumber || !clientName || !selectedCompany || !selectedBrand || !selectedBankAccount) {
-      toast.error('Заполните все обязательные поля');
+  const handleRemoveProduct = (productId: string) => {
+    setSelectedProducts(selectedProducts.filter(p => p.id !== productId));
+  };
+  
+  const handleQuantityChange = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveProduct(productId);
       return;
     }
     
-    if (products.length === 0) {
-      toast.error('Добавьте хотя бы один товар');
+    setSelectedProducts(selectedProducts.map(p => 
+      p.id === productId ? { ...p, quantity } : p
+    ));
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Валидация формы
+    if (!documentTitle) {
+      toast({
+        title: "Ошибка",
+        description: "Укажите название документа",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Here you would submit the form data to your backend
-    console.log({
-      docType,
-      orderNumber,
-      clientName,
-      clientParentName,
-      clientAddress,
-      validityDays,
-      email,
-      phone,
-      deliveryAddress,
-      passportSeries,
-      passportNumber,
-      passportIssued,
-      passportDate,
-      companyId: selectedCompany,
-      brandId: selectedBrand,
-      bankAccountId: selectedBankAccount,
-      products,
-      delivery: {
-        enabled: includeDelivery,
-        daysCount: deliveryDays,
-        name: deliveryName,
-        price: deliveryPrice,
-        quantity: deliveryQuantity,
-        totalPrice: deliveryPrice * deliveryQuantity
-      }
+    if (!selectedCompanyId) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите компанию",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedBrandId) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите бренд",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (selectedProducts.length === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Добавьте хотя бы один товар",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Здесь была бы логика сохранения документа
+
+    toast({
+      title: "Документ создан",
+      description: `Документ "${documentTitle}" успешно создан`,
+      variant: "default",
     });
     
-    toast.success('Документ успешно создан');
-    navigate('/dashboard');
-  };
-  
-  const handleClose = () => {
+    // Перенаправляем на страницу списка документов
     navigate('/dashboard');
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto p-4 max-w-4xl">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl font-semibold">Заполните форму</h1>
-          <button 
-            onClick={handleClose}
-            className="btn-secondary"
-          >
-            Закрыть
-          </button>
-        </div>
-        
-        <div className="bg-secondary rounded-lg p-4 mb-6">
-          <div className="form-group">
-            <label htmlFor="docType" className="form-label">Тип документа</label>
-            <select
-              id="docType"
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              className="bg-input"
+    <div className="min-h-screen bg-background">
+      <header className="bg-card shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-semibold">Система управления документами</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground">
+              {user?.username} ({user?.role})
+            </span>
+            <button 
+              onClick={logout} 
+              className="btn-secondary"
             >
-              <option value="Продажа">Продажа</option>
-              <option value="Счет">Счет</option>
-              <option value="Договор">Договор</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="bg-secondary rounded-lg overflow-hidden mb-6">
-          <div className="flex border-b border-border">
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'client' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('client')}
-            >
-              Клиент
-            </button>
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'company' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('company')}
-            >
-              Фирма
-            </button>
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'products' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('products')}
-            >
-              Товары
-            </button>
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'delivery' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('delivery')}
-            >
-              Доставка
+              Выйти
             </button>
           </div>
-          
-          <div className="p-4">
-            {/* Client Tab */}
-            {activeTab === 'client' && (
-              <div className="space-y-4 animate-fade-in">
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold">Создание документа</h2>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-6">
+            <div className="border-b border-border">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  type="button"
+                  className={`py-2 px-1 border-b-2 ${activeTab === 'general' ? 'tab-active' : 'tab-inactive'}`}
+                  onClick={() => setActiveTab('general')}
+                >
+                  Общая информация
+                </button>
+                <button
+                  type="button"
+                  className={`py-2 px-1 border-b-2 ${activeTab === 'company' ? 'tab-active' : 'tab-inactive'}`}
+                  onClick={() => setActiveTab('company')}
+                >
+                  Фирма
+                </button>
+                <button
+                  type="button"
+                  className={`py-2 px-1 border-b-2 ${activeTab === 'products' ? 'tab-active' : 'tab-inactive'}`}
+                  onClick={() => setActiveTab('products')}
+                >
+                  Товары
+                </button>
+                <button
+                  type="button"
+                  className={`py-2 px-1 border-b-2 ${activeTab === 'delivery' ? 'tab-active' : 'tab-inactive'}`}
+                  onClick={() => setActiveTab('delivery')}
+                >
+                  Доставка
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          <div className="bg-card shadow rounded-lg p-6 mb-6">
+            {/* Вкладка "Общая информация" */}
+            {activeTab === 'general' && (
+              <div className="space-y-4">
                 <div className="form-group">
-                  <label htmlFor="orderNumber" className="form-label">Ордер *</label>
+                  <label htmlFor="document-title" className="form-label">Название документа *</label>
                   <input
-                    id="orderNumber"
+                    id="document-title"
                     type="text"
-                    value={orderNumber}
-                    onChange={(e) => setOrderNumber(e.target.value)}
-                    placeholder="Ордер *"
+                    value={documentTitle}
+                    onChange={(e) => setDocumentTitle(e.target.value)}
                     required
                   />
                 </div>
-                
                 <div className="form-group">
-                  <label htmlFor="clientName" className="form-label">ФИО клиента (именительный) *</label>
-                  <input
-                    id="clientName"
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="ФИО клиента (именительный) *"
+                  <label htmlFor="document-type" className="form-label">Тип документа *</label>
+                  <select
+                    id="document-type"
+                    value={documentType}
+                    onChange={(e) => setDocumentType(e.target.value as any)}
                     required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="clientParentName" className="form-label">ФИО клиента (родительный) *</label>
-                  <input
-                    id="clientParentName"
-                    type="text"
-                    value={clientParentName}
-                    onChange={(e) => setClientParentName(e.target.value)}
-                    placeholder="ФИО клиента (родительный) *"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="clientAddress" className="form-label">Адрес заказчика</label>
-                  <input
-                    id="clientAddress"
-                    type="text"
-                    value={clientAddress}
-                    onChange={(e) => setClientAddress(e.target.value)}
-                    placeholder="Адрес заказчика"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="validityDays" className="form-label">Счет действителен в течении (в днях)</label>
-                  <input
-                    id="validityDays"
-                    type="number"
-                    min="1"
-                    value={validityDays}
-                    onChange={(e) => setValidityDays(parseInt(e.target.value))}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="email" className="form-label">Email</label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="phone" className="form-label">Телефон</label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Телефон"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="deliveryAddress" className="form-label">Адрес доставки</label>
-                  <input
-                    id="deliveryAddress"
-                    type="text"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="Адрес доставки"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="passportSeries" className="form-label">Серия паспорта</label>
-                  <input
-                    id="passportSeries"
-                    type="text"
-                    value={passportSeries}
-                    onChange={(e) => setPassportSeries(e.target.value)}
-                    placeholder="Серия паспорта"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="passportNumber" className="form-label">Номер паспорта</label>
-                  <input
-                    id="passportNumber"
-                    type="text"
-                    value={passportNumber}
-                    onChange={(e) => setPassportNumber(e.target.value)}
-                    placeholder="Номер паспорта"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="passportIssued" className="form-label">Паспорт выдан</label>
-                  <input
-                    id="passportIssued"
-                    type="text"
-                    value={passportIssued}
-                    onChange={(e) => setPassportIssued(e.target.value)}
-                    placeholder="Паспорт выдан"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="passportDate" className="form-label">Дата выдачи паспорта</label>
-                  <input
-                    id="passportDate"
-                    type="date"
-                    value={passportDate}
-                    onChange={(e) => setPassportDate(e.target.value)}
-                  />
+                  >
+                    <option value="invoice">Счет-фактура</option>
+                    <option value="contract">Договор</option>
+                    <option value="act">Акт</option>
+                    <option value="other">Другое</option>
+                  </select>
                 </div>
               </div>
             )}
-            
-            {/* Company Tab */}
+
+            {/* Вкладка "Фирма" */}
             {activeTab === 'company' && (
-              <div className="space-y-4 animate-fade-in">
+              <div className="space-y-4">
                 <div className="form-group">
-                  <label htmlFor="company" className="form-label">Выберите фирму *</label>
+                  <label htmlFor="company" className="form-label">Компания *</label>
                   <select
                     id="company"
-                    value={selectedCompany}
-                    onChange={(e) => {
-                      setSelectedCompany(e.target.value);
-                      setSelectedBrand('');
-                      setSelectedBankAccount('');
-                    }}
-                    className="bg-input"
+                    value={selectedCompanyId}
+                    onChange={(e) => handleCompanyChange(e.target.value)}
                     required
                   >
-                    <option value="">Выберите фирму</option>
-                    {MOCK_COMPANIES.map(company => (
-                      <option key={company.id} value={company.id}>
-                        {company.name}
-                      </option>
+                    <option value="">Выберите компанию</option>
+                    {mockCompanies.map(company => (
+                      <option key={company.id} value={company.id}>{company.name}</option>
                     ))}
                   </select>
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="brand" className="form-label">Выберите бренд *</label>
+                  <label htmlFor="brand" className="form-label">Бренд *</label>
                   <select
                     id="brand"
-                    value={selectedBrand}
-                    onChange={(e) => setSelectedBrand(e.target.value)}
-                    className="bg-input"
-                    disabled={!selectedCompany}
+                    value={selectedBrandId}
+                    onChange={(e) => setSelectedBrandId(e.target.value)}
+                    disabled={!selectedCompanyId}
                     required
                   >
                     <option value="">Выберите бренд</option>
                     {filteredBrands.map(brand => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </option>
+                      <option key={brand.id} value={brand.id}>{brand.name}</option>
                     ))}
                   </select>
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="bankAccount" className="form-label">Выберите банковский счет *</label>
+                  <label htmlFor="bank-account" className="form-label">Банковский счет</label>
                   <select
-                    id="bankAccount"
-                    value={selectedBankAccount}
-                    onChange={(e) => setSelectedBankAccount(e.target.value)}
-                    className="bg-input"
-                    disabled={!selectedCompany}
-                    required
+                    id="bank-account"
+                    value={selectedBankAccountId}
+                    onChange={(e) => setSelectedBankAccountId(e.target.value)}
+                    disabled={!selectedCompanyId}
                   >
-                    <option value="">Выберите банк</option>
+                    <option value="">Выберите банковский счет</option>
                     {filteredBankAccounts.map(account => (
                       <option key={account.id} value={account.id}>
-                        {account.name}
+                        {account.accountNumber} ({account.bankName})
                       </option>
                     ))}
                   </select>
                 </div>
+                
+                {selectedCompanyId && (
+                  <div className="mt-6 p-4 bg-secondary rounded">
+                    <h3 className="font-medium mb-2">Информация о компании</h3>
+                    {(() => {
+                      const company = mockCompanies.find(c => c.id === selectedCompanyId);
+                      return company ? (
+                        <div className="space-y-1 text-sm">
+                          <p><span className="text-muted-foreground">Название:</span> {company.name}</p>
+                          <p><span className="text-muted-foreground">ИНН:</span> {company.inn}</p>
+                          <p><span className="text-muted-foreground">Адрес:</span> {company.address}</p>
+                          <p><span className="text-muted-foreground">Директор:</span> {company.director}</p>
+                          <p><span className="text-muted-foreground">Главный бухгалтер:</span> {company.accountant}</p>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
               </div>
             )}
-            
-            {/* Products Tab */}
+
+            {/* Вкладка "Товары" */}
             {activeTab === 'products' && (
-              <div className="animate-fade-in">
-                <div className="space-y-4 mb-6">
-                  <div className="form-group">
-                    <label htmlFor="productName" className="form-label">Наименование</label>
-                    <input
-                      id="productName"
-                      type="text"
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                    />
-                  </div>
+              <div>
+                <div className="mb-6">
+                  <h3 className="font-medium mb-4">Доступные товары</h3>
                   
-                  <div className="form-group">
-                    <label htmlFor="productUnit" className="form-label">Единицы измерения</label>
-                    <input
-                      id="productUnit"
-                      type="text"
-                      value={productUnit}
-                      onChange={(e) => setProductUnit(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="productPrice" className="form-label">Цена</label>
-                    <input
-                      id="productPrice"
-                      type="number"
-                      min="0"
-                      value={productPrice}
-                      onChange={(e) => setProductPrice(parseFloat(e.target.value))}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="productQuantity" className="form-label">Количество</label>
-                    <input
-                      id="productQuantity"
-                      type="number"
-                      min="1"
-                      value={productQuantity}
-                      onChange={(e) => setProductQuantity(parseInt(e.target.value))}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="productTotalPrice" className="form-label">Общая цена</label>
-                    <input
-                      id="productTotalPrice"
-                      type="number"
-                      value={productPrice * productQuantity}
-                      readOnly
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="productHasImage"
-                      checked={productHasImage}
-                      onChange={(e) => setProductHasImage(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="productHasImage" className="text-sm">
-                      Есть изображение
-                    </label>
-                  </div>
+                  {selectedBrandId ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {filteredProducts.map(product => (
+                        <div 
+                          key={product.id} 
+                          className="bg-secondary p-4 rounded cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => handleAddProduct(product)}
+                        >
+                          <h4 className="font-medium">{product.name}</h4>
+                          <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+                          <p className="text-sm font-medium mt-2">{product.price.toLocaleString()} ₽</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-secondary rounded p-4 text-center">
+                      <p className="text-muted-foreground">Пожалуйста, выберите бренд на вкладке "Фирма"</p>
+                    </div>
+                  )}
                 </div>
                 
-                <button 
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded flex items-center gap-2 text-sm"
-                  onClick={handleAddProduct}
-                >
-                  <Plus size={16} />
-                  <span>Добавить товар</span>
-                </button>
-                
-                {products.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-medium mb-3">Добавленные товары</h3>
-                    <ul className="divide-y divide-border">
-                      {products.map(product => (
-                        <li key={product.id} className="py-3 flex justify-between items-center">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{product.name}</span>
-                              {product.hasImage && <Image size={16} className="text-muted-foreground" />}
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {product.quantity} {product.unit} × {product.price} = {product.totalPrice}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveProduct(product.id)}
-                            className="text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <X size={18} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div className="mt-8">
+                  <h3 className="font-medium mb-4">Выбранные товары</h3>
+                  
+                  {selectedProducts.length > 0 ? (
+                    <div className="border border-border rounded overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-secondary">
+                          <tr>
+                            <th className="p-2 text-left">Товар</th>
+                            <th className="p-2 text-right">Цена</th>
+                            <th className="p-2 text-right">Количество</th>
+                            <th className="p-2 text-right">Сумма</th>
+                            <th className="p-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedProducts.map(product => (
+                            <tr key={product.id} className="border-t border-border">
+                              <td className="p-2">{product.name}</td>
+                              <td className="p-2 text-right">{product.price.toLocaleString()} ₽</td>
+                              <td className="p-2 text-right">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={product.quantity}
+                                  onChange={(e) => handleQuantityChange(product.id, parseInt(e.target.value))}
+                                  className="w-16 text-center"
+                                />
+                              </td>
+                              <td className="p-2 text-right">{(product.price * product.quantity).toLocaleString()} ₽</td>
+                              <td className="p-2 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProduct(product.id)}
+                                  className="text-destructive hover:text-destructive/80"
+                                >
+                                  Удалить
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-secondary">
+                          <tr>
+                            <td colSpan={3} className="p-2 text-right font-medium">Итого:</td>
+                            <td className="p-2 text-right font-medium">
+                              {selectedProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0).toLocaleString()} ₽
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="bg-secondary rounded p-4 text-center">
+                      <p className="text-muted-foreground">Товары не выбраны</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            
-            {/* Delivery Tab */}
+
+            {/* Вкладка "Доставка" */}
             {activeTab === 'delivery' && (
-              <div className="animate-fade-in">
-                <div className="form-group flex items-center gap-2 mb-6">
+              <div className="space-y-4">
+                <div className="form-group">
+                  <label htmlFor="delivery-address" className="form-label">Адрес доставки</label>
                   <input
-                    type="checkbox"
-                    id="includeDelivery"
-                    checked={includeDelivery}
-                    onChange={(e) => setIncludeDelivery(e.target.checked)}
-                    className="w-4 h-4"
+                    id="delivery-address"
+                    type="text"
+                    value={deliveryInfo.address}
+                    onChange={(e) => setDeliveryInfo({...deliveryInfo, address: e.target.value})}
                   />
-                  <label htmlFor="includeDelivery" className="text-base">
-                    Добавить доставку?
-                  </label>
                 </div>
-                
-                {includeDelivery && (
-                  <div className="space-y-4">
-                    <div className="form-group">
-                      <label htmlFor="deliveryDays" className="form-label">Срок в днях</label>
-                      <input
-                        id="deliveryDays"
-                        type="number"
-                        min="1"
-                        value={deliveryDays}
-                        onChange={(e) => setDeliveryDays(parseInt(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="deliveryName" className="form-label">Наименование</label>
-                      <input
-                        id="deliveryName"
-                        type="text"
-                        value={deliveryName}
-                        onChange={(e) => setDeliveryName(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="deliveryPrice" className="form-label">Стоимость</label>
-                      <input
-                        id="deliveryPrice"
-                        type="number"
-                        min="0"
-                        value={deliveryPrice}
-                        onChange={(e) => setDeliveryPrice(parseFloat(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="deliveryQuantity" className="form-label">Кол-во</label>
-                      <input
-                        id="deliveryQuantity"
-                        type="number"
-                        min="1"
-                        value={deliveryQuantity}
-                        onChange={(e) => setDeliveryQuantity(parseInt(e.target.value))}
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="deliveryTotalPrice" className="form-label">Общая стоимость</label>
-                      <input
-                        id="deliveryTotalPrice"
-                        type="number"
-                        value={deliveryPrice * deliveryQuantity}
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                )}
+                <div className="form-group">
+                  <label htmlFor="contact-person" className="form-label">Контактное лицо</label>
+                  <input
+                    id="contact-person"
+                    type="text"
+                    value={deliveryInfo.contactPerson}
+                    onChange={(e) => setDeliveryInfo({...deliveryInfo, contactPerson: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-phone" className="form-label">Телефон</label>
+                  <input
+                    id="contact-phone"
+                    type="text"
+                    value={deliveryInfo.phone}
+                    onChange={(e) => setDeliveryInfo({...deliveryInfo, phone: e.target.value})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-email" className="form-label">Email</label>
+                  <input
+                    id="contact-email"
+                    type="email"
+                    value={deliveryInfo.email}
+                    onChange={(e) => setDeliveryInfo({...deliveryInfo, email: e.target.value})}
+                  />
+                </div>
               </div>
             )}
           </div>
-        </div>
-        
-        <div className="bg-primary text-primary-foreground py-4 px-6 rounded-lg">
-          <button 
-            className="w-full text-center font-medium text-base"
-            onClick={handleSubmit}
-          >
-            Сформировать
-          </button>
-        </div>
+
+          <div className="flex justify-between">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="btn-secondary"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="btn-primary max-w-fit"
+            >
+              Создать документ
+            </button>
+          </div>
+        </form>
       </main>
     </div>
   );

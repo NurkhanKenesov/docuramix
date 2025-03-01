@@ -16,7 +16,7 @@ export const AuthForm: React.FC = () => {
     
     try {
       await login(username, password);
-      // Navigation will happen in useEffect in Login.tsx
+      // Навигация будет происходить в useEffect в Login.tsx
     } catch (error) {
       console.error('Login failed:', error);
     } finally {

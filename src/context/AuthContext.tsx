@@ -1,11 +1,11 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { User, AuthContextType, UserRole } from '@/types';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo purposes
+// Моковые пользователи для демонстрации
 const MOCK_USERS = [
   { id: '1', username: 'manager', password: 'password', role: 'manager' as UserRole },
   { id: '2', username: 'accountant', password: 'password', role: 'accountant' as UserRole },
@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user on mount
+    // Проверка наличия сохраненного пользователя
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -26,24 +26,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string) => {
-    // Simulate API call
+    // Имитация API запроса
     setLoading(true);
     
     try {
-      // For demo purposes, authenticate against mock users
+      // Для демонстрации используем моковых пользователей
       const foundUser = MOCK_USERS.find(u => u.username === username && u.password === password);
       
       if (foundUser) {
         const { password, ...userWithoutPassword } = foundUser;
         setUser(userWithoutPassword);
         localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-        toast.success('Успешная авторизация');
+        toast({
+          title: "Успешная авторизация",
+          variant: "default",
+        });
         return;
       }
       
       throw new Error('Неверный логин или пароль');
     } catch (error) {
-      toast.error((error as Error).message);
+      toast({
+        title: (error as Error).message,
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setLoading(false);
@@ -53,7 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    toast.success('Вы вышли из системы');
+    toast({
+      title: "Вы вышли из системы",
+      variant: "default",
+    });
   };
 
   const value = {

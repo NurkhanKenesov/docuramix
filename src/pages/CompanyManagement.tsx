@@ -1,315 +1,423 @@
 
 import React, { useState } from 'react';
-import { Header } from '@/components/layout/header';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
-import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { Company, Brand, BankAccount } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
-type TabType = 'info' | 'brands' | 'accounts';
+// Мок данных
+const mockCompanies: Company[] = [
+  {
+    id: '1',
+    name: 'ООО Первая Компания',
+    inn: '7712345678',
+    address: 'г. Москва, ул. Примерная, д. 1',
+    director: 'Иванов И.И.',
+    accountant: 'Петрова П.П.'
+  },
+  {
+    id: '2',
+    name: 'ЗАО Вторая Компания',
+    inn: '7812345678',
+    address: 'г. Санкт-Петербург, пр. Образцовый, д. 2',
+    director: 'Сидоров С.С.',
+    accountant: 'Кузнецова К.К.'
+  }
+];
+
+const mockBrands: Brand[] = [
+  { id: '1', name: 'Бренд Альфа', companyId: '1' },
+  { id: '2', name: 'Бренд Бета', companyId: '1' },
+  { id: '3', name: 'Бренд Гамма', companyId: '2' }
+];
+
+const mockBankAccounts: BankAccount[] = [
+  {
+    id: '1',
+    companyId: '1',
+    accountNumber: '40702810100000001234',
+    bankName: 'Банк "Пример"',
+    bik: '044525123',
+    correspondentAccount: '30101810100000000123'
+  },
+  {
+    id: '2',
+    companyId: '2',
+    accountNumber: '40702810200000002345',
+    bankName: 'Банк "Образец"',
+    bik: '044525234',
+    correspondentAccount: '30101810200000000234'
+  }
+];
 
 const CompanyManagement: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const { user, logout } = useAuth();
+  const [companies, setCompanies] = useState<Company[]>(mockCompanies);
+  const [brands, setBrands] = useState<Brand[]>(mockBrands);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(mockBankAccounts);
   
-  // Company form state
-  const [companyName, setCompanyName] = useState('');
-  const [companyType, setCompanyType] = useState('ООО');
-  const [companyInn, setCompanyInn] = useState('');
-  const [companyKpp, setCompanyKpp] = useState('');
-  const [companyOgrn, setCompanyOgrn] = useState('');
-  const [companyAddress, setCompanyAddress] = useState('');
+  const [activeTab, setActiveTab] = useState<'companies' | 'brands' | 'accounts'>('companies');
   
-  // Brand form state
-  const [brandName, setBrandName] = useState('');
+  // Состояния для форм
+  const [newCompany, setNewCompany] = useState<Omit<Company, 'id'>>({
+    name: '',
+    inn: '',
+    address: '',
+    director: '',
+    accountant: ''
+  });
   
-  // Bank account form state
-  const [bankName, setBankName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [bankBankName, setBankBankName] = useState('');
-  const [bankBik, setBankBik] = useState('');
-  const [correspondentAccount, setCorrespondentAccount] = useState('');
+  const [newBrand, setNewBrand] = useState<Omit<Brand, 'id'>>({
+    name: '',
+    companyId: ''
+  });
   
-  const handleSaveCompany = () => {
-    // Validate required fields
-    if (!companyName || !companyType || !companyInn || !companyOgrn || !companyAddress) {
-      toast.error('Заполните все обязательные поля');
+  const [newBankAccount, setNewBankAccount] = useState<Omit<BankAccount, 'id'>>({
+    companyId: '',
+    accountNumber: '',
+    bankName: '',
+    bik: '',
+    correspondentAccount: ''
+  });
+
+  // Обработчики форм
+  const handleCompanySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCompany.name || !newCompany.inn) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните обязательные поля",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Here you would normally call an API to save the company
-    console.log('Saving company:', {
-      name: companyName,
-      type: companyType,
-      inn: companyInn,
-      kpp: companyKpp,
-      ogrn: companyOgrn,
-      address: companyAddress
+    const id = Date.now().toString();
+    setCompanies([...companies, { ...newCompany, id }]);
+    setNewCompany({
+      name: '',
+      inn: '',
+      address: '',
+      director: '',
+      accountant: ''
     });
-    
-    toast.success('Организация успешно сохранена');
+    toast({
+      title: "Компания добавлена",
+      variant: "default",
+    });
   };
   
-  const handleAddBrand = () => {
-    if (!brandName) {
-      toast.error('Введите название бренда');
+  const handleBrandSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBrand.name || !newBrand.companyId) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните обязательные поля",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Here you would normally call an API to add the brand
-    console.log('Adding brand:', brandName);
-    toast.success('Бренд успешно добавлен');
-    setBrandName('');
+    const id = Date.now().toString();
+    setBrands([...brands, { ...newBrand, id }]);
+    setNewBrand({
+      name: '',
+      companyId: ''
+    });
+    toast({
+      title: "Бренд добавлен",
+      variant: "default",
+    });
   };
   
-  const handleAddBankAccount = () => {
-    if (!bankName || !accountNumber || !bankBankName || !bankBik || !correspondentAccount) {
-      toast.error('Заполните все поля банковского счета');
+  const handleBankAccountSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBankAccount.accountNumber || !newBankAccount.companyId) {
+      toast({
+        title: "Ошибка",
+        description: "Заполните обязательные поля",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Here you would normally call an API to add the bank account
-    console.log('Adding bank account:', {
-      name: bankName,
-      accountNumber,
-      bankName: bankBankName,
-      bik: bankBik,
-      correspondentAccount
+    const id = Date.now().toString();
+    setBankAccounts([...bankAccounts, { ...newBankAccount, id }]);
+    setNewBankAccount({
+      companyId: '',
+      accountNumber: '',
+      bankName: '',
+      bik: '',
+      correspondentAccount: ''
     });
-    
-    toast.success('Банковский счет успешно добавлен');
-    
-    // Reset form
-    setBankName('');
-    setAccountNumber('');
-    setBankBankName('');
-    setBankBik('');
-    setCorrespondentAccount('');
+    toast({
+      title: "Банковский счёт добавлен",
+      variant: "default",
+    });
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-5xl">
-        <div className="flex items-center gap-2 mb-6">
-          <button 
-            onClick={() => navigate('/accountant-dashboard')}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-xl font-semibold">Управление компанией</h1>
-        </div>
-        
-        <div className="bg-secondary rounded-lg overflow-hidden mb-6">
-          <div className="flex border-b border-border">
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'info' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('info')}
+    <div className="min-h-screen bg-background">
+      <header className="bg-card shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-xl font-semibold">Система управления документами</h1>
+          <div className="flex items-center gap-4">
+            <span className="text-muted-foreground">
+              {user?.username} ({user?.role})
+            </span>
+            <button 
+              onClick={logout} 
+              className="btn-secondary"
             >
-              Обновить информацию
-            </button>
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'brands' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('brands')}
-            >
-              Бренды
-            </button>
-            <button
-              className={`py-3 px-6 text-sm font-medium ${activeTab === 'accounts' ? 'tab-active' : 'tab-inactive'}`}
-              onClick={() => setActiveTab('accounts')}
-            >
-              Счета
+              Выйти
             </button>
           </div>
-          
-          <div className="p-4">
-            {/* Company Info Tab */}
-            {activeTab === 'info' && (
-              <div className="space-y-4 animate-fade-in">
-                <div className="form-group">
-                  <label htmlFor="companyName" className="form-label">Наименование организации *</label>
-                  <input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="companyType" className="form-label">Тип организации *</label>
-                  <select
-                    id="companyType"
-                    value={companyType}
-                    onChange={(e) => setCompanyType(e.target.value)}
-                    className="bg-input"
-                    required
-                  >
-                    <option value="ООО">ООО</option>
-                    <option value="ИП">ИП</option>
-                    <option value="АО">АО</option>
-                    <option value="ЗАО">ЗАО</option>
-                  </select>
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="companyInn" className="form-label">ИНН *</label>
-                  <input
-                    id="companyInn"
-                    type="text"
-                    value={companyInn}
-                    onChange={(e) => setCompanyInn(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="companyKpp" className="form-label">КПП</label>
-                  <input
-                    id="companyKpp"
-                    type="text"
-                    value={companyKpp}
-                    onChange={(e) => setCompanyKpp(e.target.value)}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="companyOgrn" className="form-label">ОГРН *</label>
-                  <input
-                    id="companyOgrn"
-                    type="text"
-                    value={companyOgrn}
-                    onChange={(e) => setCompanyOgrn(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="companyAddress" className="form-label">Юридический адрес *</label>
-                  <input
-                    id="companyAddress"
-                    type="text"
-                    value={companyAddress}
-                    onChange={(e) => setCompanyAddress(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <button 
-                  className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium"
-                  onClick={handleSaveCompany}
-                >
-                  Сохранить
-                </button>
-              </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold">Управление компаниями</h2>
+        </div>
+
+        <div className="mb-6">
+          <div className="border-b border-border">
+            <nav className="-mb-px flex">
+              <button
+                className={`py-2 px-4 border-b-2 ${activeTab === 'companies' ? 'tab-active' : 'tab-inactive'}`}
+                onClick={() => setActiveTab('companies')}
+              >
+                Компании
+              </button>
+              <button
+                className={`py-2 px-4 border-b-2 ${activeTab === 'brands' ? 'tab-active' : 'tab-inactive'}`}
+                onClick={() => setActiveTab('brands')}
+              >
+                Бренды
+              </button>
+              <button
+                className={`py-2 px-4 border-b-2 ${activeTab === 'accounts' ? 'tab-active' : 'tab-inactive'}`}
+                onClick={() => setActiveTab('accounts')}
+              >
+                Банковские счета
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Формы для создания */}
+          <div className="bg-card shadow rounded-lg p-6">
+            {activeTab === 'companies' && (
+              <>
+                <h3 className="text-lg font-medium mb-4">Добавить компанию</h3>
+                <form onSubmit={handleCompanySubmit} className="space-y-4">
+                  <div className="form-group">
+                    <label htmlFor="company-name" className="form-label">Название компании *</label>
+                    <input
+                      id="company-name"
+                      type="text"
+                      value={newCompany.name}
+                      onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="company-inn" className="form-label">ИНН *</label>
+                    <input
+                      id="company-inn"
+                      type="text"
+                      value={newCompany.inn}
+                      onChange={(e) => setNewCompany({...newCompany, inn: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="company-address" className="form-label">Адрес</label>
+                    <input
+                      id="company-address"
+                      type="text"
+                      value={newCompany.address}
+                      onChange={(e) => setNewCompany({...newCompany, address: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="company-director" className="form-label">Директор</label>
+                    <input
+                      id="company-director"
+                      type="text"
+                      value={newCompany.director}
+                      onChange={(e) => setNewCompany({...newCompany, director: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="company-accountant" className="form-label">Главный бухгалтер</label>
+                    <input
+                      id="company-accountant"
+                      type="text"
+                      value={newCompany.accountant}
+                      onChange={(e) => setNewCompany({...newCompany, accountant: e.target.value})}
+                    />
+                  </div>
+                  <button type="submit" className="btn-primary">Добавить компанию</button>
+                </form>
+              </>
             )}
             
-            {/* Brands Tab */}
             {activeTab === 'brands' && (
-              <div className="animate-fade-in">
-                <h2 className="text-lg font-medium mb-4">Список брендов организации</h2>
-                
-                <div className="space-y-4 mb-6">
+              <>
+                <h3 className="text-lg font-medium mb-4">Добавить бренд</h3>
+                <form onSubmit={handleBrandSubmit} className="space-y-4">
                   <div className="form-group">
-                    <label htmlFor="brandName" className="form-label">Название бренда</label>
+                    <label htmlFor="brand-name" className="form-label">Название бренда *</label>
                     <input
-                      id="brandName"
+                      id="brand-name"
                       type="text"
-                      value={brandName}
-                      onChange={(e) => setBrandName(e.target.value)}
+                      value={newBrand.name}
+                      onChange={(e) => setNewBrand({...newBrand, name: e.target.value})}
+                      required
                     />
                   </div>
-                  
-                  <button 
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={handleAddBrand}
-                  >
-                    <Plus size={16} />
-                    <span>Добавить бренд</span>
-                  </button>
-                </div>
-                
-                <ul className="space-y-3">
-                  <li className="bg-muted rounded-lg p-4 flex justify-between items-center">
-                    <span className="font-medium">dom-na-dachu.ru</span>
-                    <button className="text-muted-foreground hover:text-destructive transition-colors">
-                      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                      </svg>
-                    </button>
-                  </li>
-                </ul>
+                  <div className="form-group">
+                    <label htmlFor="brand-company" className="form-label">Компания *</label>
+                    <select
+                      id="brand-company"
+                      value={newBrand.companyId}
+                      onChange={(e) => setNewBrand({...newBrand, companyId: e.target.value})}
+                      required
+                    >
+                      <option value="">Выберите компанию</option>
+                      {companies.map(company => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit" className="btn-primary">Добавить бренд</button>
+                </form>
+              </>
+            )}
+            
+            {activeTab === 'accounts' && (
+              <>
+                <h3 className="text-lg font-medium mb-4">Добавить банковский счет</h3>
+                <form onSubmit={handleBankAccountSubmit} className="space-y-4">
+                  <div className="form-group">
+                    <label htmlFor="account-company" className="form-label">Компания *</label>
+                    <select
+                      id="account-company"
+                      value={newBankAccount.companyId}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, companyId: e.target.value})}
+                      required
+                    >
+                      <option value="">Выберите компанию</option>
+                      {companies.map(company => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="account-number" className="form-label">Номер счета *</label>
+                    <input
+                      id="account-number"
+                      type="text"
+                      value={newBankAccount.accountNumber}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, accountNumber: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="bank-name" className="form-label">Название банка</label>
+                    <input
+                      id="bank-name"
+                      type="text"
+                      value={newBankAccount.bankName}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, bankName: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="bik" className="form-label">БИК</label>
+                    <input
+                      id="bik"
+                      type="text"
+                      value={newBankAccount.bik}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, bik: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="correspondent-account" className="form-label">Корр. счет</label>
+                    <input
+                      id="correspondent-account"
+                      type="text"
+                      value={newBankAccount.correspondentAccount}
+                      onChange={(e) => setNewBankAccount({...newBankAccount, correspondentAccount: e.target.value})}
+                    />
+                  </div>
+                  <button type="submit" className="btn-primary">Добавить счет</button>
+                </form>
+              </>
+            )}
+          </div>
+
+          {/* Списки */}
+          <div>
+            {activeTab === 'companies' && (
+              <div className="bg-card shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium mb-4">Список компаний</h3>
+                {companies.length > 0 ? (
+                  <div className="space-y-3">
+                    {companies.map(company => (
+                      <div key={company.id} className="p-3 bg-secondary rounded">
+                        <h4 className="font-medium">{company.name}</h4>
+                        <p className="text-sm text-muted-foreground">ИНН: {company.inn}</p>
+                        {company.address && <p className="text-sm text-muted-foreground">{company.address}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Нет добавленных компаний</p>
+                )}
               </div>
             )}
             
-            {/* Bank Accounts Tab */}
+            {activeTab === 'brands' && (
+              <div className="bg-card shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium mb-4">Список брендов</h3>
+                {brands.length > 0 ? (
+                  <div className="space-y-3">
+                    {brands.map(brand => {
+                      const company = companies.find(c => c.id === brand.companyId);
+                      return (
+                        <div key={brand.id} className="p-3 bg-secondary rounded">
+                          <h4 className="font-medium">{brand.name}</h4>
+                          {company && <p className="text-sm text-muted-foreground">Компания: {company.name}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Нет добавленных брендов</p>
+                )}
+              </div>
+            )}
+            
             {activeTab === 'accounts' && (
-              <div className="animate-fade-in">
-                <h2 className="text-lg font-medium mb-4">Банковские счета</h2>
-                
-                <div className="space-y-4 mb-6">
-                  <div className="form-group">
-                    <label htmlFor="bankName" className="form-label">Название счета</label>
-                    <input
-                      id="bankName"
-                      type="text"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                    />
+              <div className="bg-card shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium mb-4">Список банковских счетов</h3>
+                {bankAccounts.length > 0 ? (
+                  <div className="space-y-3">
+                    {bankAccounts.map(account => {
+                      const company = companies.find(c => c.id === account.companyId);
+                      return (
+                        <div key={account.id} className="p-3 bg-secondary rounded">
+                          <h4 className="font-medium">Счет: {account.accountNumber}</h4>
+                          {company && <p className="text-sm text-muted-foreground">Компания: {company.name}</p>}
+                          {account.bankName && <p className="text-sm text-muted-foreground">Банк: {account.bankName}</p>}
+                        </div>
+                      );
+                    })}
                   </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="accountNumber" className="form-label">Номер счета</label>
-                    <input
-                      id="accountNumber"
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="bankBankName" className="form-label">Наименование банка</label>
-                    <input
-                      id="bankBankName"
-                      type="text"
-                      value={bankBankName}
-                      onChange={(e) => setBankBankName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="bankBik" className="form-label">БИК</label>
-                    <input
-                      id="bankBik"
-                      type="text"
-                      value={bankBik}
-                      onChange={(e) => setBankBik(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="correspondentAccount" className="form-label">Корр. счет</label>
-                    <input
-                      id="correspondentAccount"
-                      type="text"
-                      value={correspondentAccount}
-                      onChange={(e) => setCorrespondentAccount(e.target.value)}
-                    />
-                  </div>
-                  
-                  <button 
-                    className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={handleAddBankAccount}
-                  >
-                    <Plus size={16} />
-                    <span>Добавить счет</span>
-                  </button>
-                </div>
+                ) : (
+                  <p className="text-muted-foreground">Нет добавленных банковских счетов</p>
+                )}
               </div>
             )}
           </div>

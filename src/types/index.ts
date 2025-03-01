@@ -7,18 +7,20 @@ export interface User {
   role: UserRole;
 }
 
+export interface AuthContextType {
+  user: User | null;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
+
 export interface Company {
   id: string;
   name: string;
-  type: string;
   inn: string;
-  kpp: string;
-  ogrn: string;
   address: string;
-  chiefAccountant?: string;
-  stampImageUrl?: string;
-  directorSignatureUrl?: string;
-  accountantSignatureUrl?: string;
+  director: string;
+  accountant: string;
 }
 
 export interface Brand {
@@ -29,69 +31,53 @@ export interface Brand {
 
 export interface BankAccount {
   id: string;
-  name: string;
+  companyId: string;
   accountNumber: string;
   bankName: string;
   bik: string;
   correspondentAccount: string;
-  companyId: string;
 }
 
 export interface Product {
   id: string;
   name: string;
-  unit: string;
+  sku: string;
   price: number;
-  quantity: number;
-  totalPrice: number;
-  imageUrl?: string;
+  description: string;
+  image?: string;
+  brandId: string;
 }
 
 export interface DeliveryInfo {
-  enabled: boolean;
-  daysCount: number;
-  name: string;
-  price: number;
-  quantity: number;
-  totalPrice: number;
+  address: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
 }
 
 export interface DocumentVersion {
   id: string;
-  versionNumber: number;
-  createdAt: Date;
+  documentId: string;
+  version: number;
+  createdAt: string;
   createdBy: string;
+  data: any;
 }
 
 export interface Document {
   id: string;
-  type: 'sale' | 'invoice' | 'contract' | 'other';
-  orderNumber: string;
-  clientName: string;
-  clientParentName: string;
-  clientAddress: string;
-  validityDays: number;
-  email: string;
-  phone: string;
-  deliveryAddress: string;
-  passportSeries: string;
-  passportNumber: string;
-  passportIssued: string;
-  passportDate: Date;
+  title: string;
+  type: 'invoice' | 'contract' | 'act' | 'other';
   companyId: string;
   brandId: string;
-  bankAccountId: string;
-  products: Product[];
-  delivery: DeliveryInfo;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   createdBy: string;
+  status: 'draft' | 'active' | 'archived';
+  products: Product[];
+  deliveryInfo?: DeliveryInfo;
+  bankAccountId?: string;
+  customDate?: string;
+  currentVersionId: string;
   versions: DocumentVersion[];
-}
-
-export interface AuthContextType {
-  user: User | null;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: boolean;
 }
